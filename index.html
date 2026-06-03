@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MD01 Dial Expert</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2C1E16">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        :root {
+            --primary: #2C1E16;
+            --bg: #F8F5F0;
+            --accent: #C78038;
+            --card-bg: #FFFFFF;
+            --text-muted: #8E7F75;
+            --border-color: #EAE5DC;
+            --success: #4CAF50;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--primary);
+            padding-bottom: 70px; /* Space for bottom nav */
+            min-height: 100vh;
+        }
+        
+        /* App Layout Header */
+        .app-bar {
+            background: var(--primary);
+            color: white;
+            padding: 30px 20px 15px 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .app-bar h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; }
+        .app-bar p { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+        .view-section { padding: 16px; display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.2s ease-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 16px rgba(44, 30, 22, 0.03);
+            border: 1px solid rgba(44, 30, 22, 0.01);
+        }
+
+        .card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* UI Components */
+        .segmented-control {
+            display: flex;
+            background: var(--border-color);
+            padding: 3px;
+            border-radius: 10px;
+        }
+        .segmented-item {
+            flex: 1; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: 700; border-radius: 8px; cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+        }
+        .segmented-item.active { background: var(--card-bg); color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+
+        .value-badge { background: rgba(199, 128, 56, 0.1); color: var(--accent); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; }
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--border-color); outline: none; margin: 15px 0; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); border: 4px solid var(--card-bg); box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer;
+        }
+
+        /* Dashboard Dial */
+        .dashboard { text-align: center; padding: 10px 0; }
+        .dial {
+            width: 150px; height: 150px; border-radius: 50%; border: 6px solid var(--primary); margin: 0 auto 15px auto; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); box-shadow: inset 0 4px 10px rgba(0,0,0,0.03);
+        }
+        .dial-num { font-size: 3.4rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        .dial-unit { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; margin-top: 2px; }
+
+        .sub-grid { display: flex; justify-content: space-between; border-top: 1px dashed var(--border-color); padding-top: 12px; margin-top: 12px; font-size: 0.8rem; color: var(--text-muted); }
+        .sub-grid strong { color: var(--primary); }
+
+        .alert-info { background: #FFF1F1; border-left: 4px solid #FF6B6B; padding: 10px 14px; border-radius: 0 10px 10px 0; font-size: 0.8rem; color: #D32F2F; line-height: 1.4; margin-top: 12px; display: none; }
+
+        /* Form Controls */
+        .form-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; font-size: 0.9rem; outline: none; background: var(--bg); color: var(--primary); }
+        .btn { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+        .btn:active { background: #B2702E; }
+
+        /* Logs List */
+        .log-item { border-bottom: 1px solid var(--border-color); padding: 10px 0; font-size: 0.85rem; position: relative; }
+        .log-item:last-child { border-bottom: none; }
+        .log-meta { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75rem; margin-bottom: 4px; }
+        .log-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+        .log-del { position: absolute; right: 0; bottom: 10px; color: #FF6B6B; font-size: 0.75rem; cursor: pointer; }
+
+        /* Bottom Tab Navigation */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); display: flex; border-top: 1px solid var(--border-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.02); z-index: 100;
+        }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+        .nav-item.active { color: var(--accent); }
+        .nav-icon { font-size: 1.3rem; margin-bottom: 2px; }
+
+        /* Architecture Core Info for Expansion */
+        .dev-code { background: #272822; color: #F8F8F2; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.75rem; overflow-x: auto; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="app-bar">
+        <h1 id="appBarTitle">MD01 DIAL EXPERT</h1>
+        <p>精密量化冲煮物理容器架构</p>
+    </div>
+
+    <!-- VIEW 1: CORE CALCULATOR -->
+    <div id="view-calc" class="view-section active">
+        <div class="card">
+            <div class="segmented-control">
+                <div class="segmented-item active" onclick="setMethod('espresso', this)">意式浓缩 (Star 3)</div>
+                <div class="segmented-item" onclick="setMethod('pourover', this)">手冲滴滤 (V60)</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span>烘焙度架构级控制</span><span class="value-badge" id="roastVal">中度烘焙</span></div>
+            <input type="range" id="roastLevel" min="1" max="3" value="2" step="1" oninput="calculate()">
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); font-weight:600;">
+                <span>浅烘 (高硬度)</span>
+                <span>中度烘焙</span>
+                <span>深烘 (松脆多孔)</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span>热动能水温控制</span><span class="value-badge" id="tempVal">92°C</span></div>
+            <input type="range" id="waterTemp" min="80" max="98" value="92" step="1" oninput="calculate()">
+        </div>
+
+        <div class="card" style="background: var(--primary); color: white;">
+            <div class="dashboard">
+                <div class="dial">
+                    <div class="dial-num" id="targetClick">11</div>
+                    <div class="dial-unit">TARGET CLICK</div>
+                </div>
+                <div class="sub-grid">
+                    <span>目标粉体粒径: <strong id="targetMicron" style="color:white;">300</strong> <strong style="color:var(--accent);">μm</strong></span>
+                    <span>行程解构率: <strong style="color:var(--accent);">~26.5 μm/格</strong></span>
+                </div>
+                <div class="alert-info" id="alertBox"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: BREW LOGS (DATABASE VIA LOCALSTORAGE) -->
+    <div id="view-logs" class="view-section">
+        <div class="card">
+            <div class="card-title">新建冲煮日志记录</div>
+            <input type="text" id="logBean" class="form-input" placeholder="咖啡豆名称 (如: 耶加雪菲 厌氧日晒)">
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="logClick" class="form-input" placeholder="实际使用刻度 (Click)">
+                <input type="number" id="logTemp" class="form-input" placeholder="水温 (°C)">
+            </div>
+            <input type="text" id="logNote" class="form-input" placeholder="风味笔记表现 / 萃取秒数反馈">
+            <button class="btn" onclick="saveLog()">本地持久化序列化存储</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">历史冲煮数据链 (LocalStorage)</div>
+            <div id="logsContainer"><!-- Dynamic --></div>
+        </div>
+    </div>
+
+    <!-- VIEW 3: ARCHITECTURE & EXTENSION MANUAL -->
+    <div id="view-dev" class="view-section">
+        <div class="card">
+            <div class="card-title">应用扩展架构说明 (无损维护)</div>
+            <p style="font-size:0.85rem; line-height:1.5; color:var(--primary); margin-bottom:10px;">
+                本应用采用原生 <strong>Vanilla JS + PWA 离线沙盒架构</strong> 编写，你可以随时使用任何文本编辑器打开本文件修改。代码不依赖任何外部框架，100%全本地化，不上传任何隐私。
+            </p>
+            <div class="card-title" style="font-size:0.85rem; margin-top:15px;">如何添加新模块：</div>
+            <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
+                1. <strong>增加视图：</strong> 在 HTML 中复制一个 <code>&lt;div class="view-section"&gt;</code> 并赋予唯一 ID。<br>
+                2. <strong>增加导航：</strong> 在底部 <code>nav-bar</code> 中增加一个按钮，绑定 <code>switchView('你的ID')</code>。<br>
+                3. <strong>本地硬件联动：</strong> 可通过 <code>navigator.bluetooth</code> 增加蓝牙连接数显咖啡秤、电子温度计等高级扩展功能。
+            </p>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchView('calc', this)">
+            <div class="nav-icon">📊</div>
+            <span>量化计算</span>
+        </div>
+        <div class="nav-item" onclick="switchView('logs', this)">
+            <div class="nav-icon">📓</div>
+            <span>冲煮日志</span>
+        </div>
+        <div class="nav-item" onclick="switchView('dev', this)">
+            <div class="nav-icon">🛠️</div>
+            <span>架构拓展</span>
+        </div>
+    </div>
+
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('PWA Service Worker 注册成功:', reg.scope))
+                    .catch(err => console.log('Service Worker 注册失败:', err));
+            });
+        }
+
+        // View Router Switcher
+        function switchView(viewId, element) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById('view-' + viewId).classList.add('active');
+            if(element) element.classList.add('active');
+            
+            const titles = { calc: "MD01 DIAL EXPERT", logs: "BREW DATA CHAIN", dev: "DEVELOPER MANUAL" };
+            document.getElementById('appBarTitle').innerText = titles[viewId];
+        }
+
+        // Calculation Subsystem
+        let currentMethod = 'espresso';
+        const roastMap = { 1: "极浅 / 浅度烘焙", 2: "城市 / 中度烘焙", 3: "全城 / 深度烘焙" };
+
+        function setMethod(method, el) {
+            currentMethod = method;
+            document.querySelectorAll('.segmented-item').forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+            calculate();
+        }
+
+        function calculate() {
+            const roast = parseInt(document.getElementById('roastLevel').value);
+            const temp = parseInt(document.getElementById('waterTemp').value);
+
+            document.getElementById('roastVal').innerText = roastMap[roast];
+            document.getElementById('tempVal').innerText = temp + "°C";
+
+            let targetMicron = 0;
+            let alertMsg = "";
+            const MICRON_PER_CLICK = 26.5; 
+            
+            if (currentMethod === 'espresso') {
+                targetMicron = 300;
+                if (roast === 1) targetMicron -= 60;  
+                if (roast === 3) targetMicron += 70;  
+
+                if (roast === 3 && temp > 88) alertMsg = "⚠️ 高温预警：深烘豆结构高度疏松且脆，高温易导致大分子苦涩物瞬间溶出，建议降温到 82°C-85°C。";
+                if (roast === 1 && temp < 93) alertMsg = "⚠️ 腔体热补偿提示：浅烘硬度极高，若使用手动加压设备，请连续用沸水预热冲煮头 2-3 次以防失热。";
+            } else {
+                targetMicron = 820;
+                if (roast === 1) targetMicron -= 140; 
+                if (roast === 3) targetMicron += 180; 
+
+                if (roast === 3 && temp > 86) alertMsg = "⚠️ 堵塞预警：深烘豆极易产生细粉，若水温过高，排气会封锁滤纸孔隙造成过度浸泡。";
+                if (roast === 1 && temp < 92) alertMsg = "⚠️ 动能提示：浅烘成分难溶，建议使用 93°C 以上高温水进行分段大流速注水。";
+            }
+
+            let targetClick = Math.round(targetMicron / MICRON_PER_CLICK);
+            if(targetClick < 0) targetClick = 0;
+
+            document.getElementById('targetMicron').innerText = targetMicron;
+            document.getElementById('targetClick').innerText = targetClick;
+            
+            const alertBox = document.getElementById('alertBox');
+            if (alertMsg) {
+                alertBox.innerText = alertMsg;
+                alertBox.style.display = 'block';
+            } else {
+                alertBox.style.display = 'none';
+            }
+        }
+
+        // LocalStorage Database Subsystem
+        function saveLog() {
+            const bean = document.getElementById('logBean').value.trim();
+            const click = document.getElementById('logClick').value.trim();
+            const temp = document.getElementById('logTemp').value.trim();
+            const note = document.getElementById('logNote').value.trim();
+
+            if (!bean || !click || !temp) {
+                alert("请完整填写豆名、刻度及水温参数！");
+                return;
+            }
+
+            const log = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString(),
+                bean: bean,
+                click: click,
+                temp: temp,
+                note: note
+            };
+
+            let logs = JSON.parse(localStorage.getItem('coffee_logs') || '[]');
+            logs.unshift(log);
+            localStorage.setItem('coffee_logs', JSON.stringify(logs));
+
+            // Clear Form
+            document.getElementById('logBean').value = '';
+            document.getElementById('logClick').value = '';
+            document.getElementById('logTemp').value = '';
+            document.getElementById('logNote').value = '';
+
+            loadLogs();
+            alert("日志已安全写入本地数据链！");
+        }
+
+        function loadLogs() {
+            const container = document.getElementById('logsContainer');
+            let logs = JSON.parse(localStorage.getItem('coffee_logs') || '[]');
+            
+            if(logs.length === 0) {
+                container.innerHTML = '<p style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:20px 0;">暂无历史冲煮数据</p>';
+                return;
+            }
+
+            container.innerHTML = logs.map(log => `
+                <div class="log-item">
+                    <div class="log-meta"><span>${log.date}</span><span>${log.temp}°C / ${log.click}格</span></div>
+                    <div class="log-title">${log.bean}</div>
+                    <div style="color:var(--text-muted); font-size:0.8rem; margin-top:2px;">${log.note || '无备注内容'}</div>
+                    <div class="log-del" onclick="deleteLog(${log.id})">删除</div>
+                </div>
+            `).join('');
+        }
+
+        function deleteLog(id) {
+            if(confirm("确定删除该条冲煮日志吗？")) {
+                let logs = JSON.parse(localStorage.getItem('coffee_logs') || '[]');
+                logs = logs.filter(log => log.id !== id);
+                localStorage.setItem('coffee_logs', JSON.stringify(logs));
+                loadLogs();
+            }
+        }
+
+        // Initialize App
+        calculate();
+        loadLogs();
+    </script>
+</body>
+</html>

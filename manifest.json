@@ -1,0 +1,18 @@
+{
+  "name": "MD01 Coffee Dial Expert",
+  "short_name": "CoffeeDial",
+  "description": "精密咖啡研磨与萃取参数级联动系统",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F5F0",
+  "theme_color": "#2C1E16",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
