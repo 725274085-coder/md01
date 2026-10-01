@@ -1,359 +1,43 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MD01 Dial Expert</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2C1E16">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <style>
-        :root {
-            --primary: #2C1E16;
-            --bg: #F8F5F0;
-            --accent: #C78038;
-            --card-bg: #FFFFFF;
-            --text-muted: #8E7F75;
-            --border-color: #EAE5DC;
-            --success: #4CAF50;
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--primary);
-            padding-bottom: 70px; /* Space for bottom nav */
-            min-height: 100vh;
-        }
-        
-        /* App Layout Header */
-        .app-bar {
-            background: var(--primary);
-            color: white;
-            padding: 30px 20px 15px 20px;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .app-bar h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; }
-        .app-bar p { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
-
-        .view-section { padding: 16px; display: none; }
-        .view-section.active { display: block; animation: fadeIn 0.2s ease-out; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 14px;
-            box-shadow: 0 4px 16px rgba(44, 30, 22, 0.03);
-            border: 1px solid rgba(44, 30, 22, 0.01);
-        }
-
-        .card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* UI Components */
-        .segmented-control {
-            display: flex;
-            background: var(--border-color);
-            padding: 3px;
-            border-radius: 10px;
-        }
-        .segmented-item {
-            flex: 1; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: 700; border-radius: 8px; cursor: pointer; color: var(--text-muted); transition: all 0.2s;
-        }
-        .segmented-item.active { background: var(--card-bg); color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-
-        .value-badge { background: rgba(199, 128, 56, 0.1); color: var(--accent); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; }
-
-        input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--border-color); outline: none; margin: 15px 0; }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); border: 4px solid var(--card-bg); box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer;
-        }
-
-        /* Dashboard Dial */
-        .dashboard { text-align: center; padding: 10px 0; }
-        .dial {
-            width: 150px; height: 150px; border-radius: 50%; border: 6px solid var(--primary); margin: 0 auto 15px auto; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); box-shadow: inset 0 4px 10px rgba(0,0,0,0.03);
-        }
-        .dial-num { font-size: 3.4rem; font-weight: 900; color: var(--accent); line-height: 1; }
-        .dial-unit { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; margin-top: 2px; }
-
-        .sub-grid { display: flex; justify-content: space-between; border-top: 1px dashed var(--border-color); padding-top: 12px; margin-top: 12px; font-size: 0.8rem; color: var(--text-muted); }
-        .sub-grid strong { color: var(--primary); }
-
-        .alert-info { background: #FFF1F1; border-left: 4px solid #FF6B6B; padding: 10px 14px; border-radius: 0 10px 10px 0; font-size: 0.8rem; color: #D32F2F; line-height: 1.4; margin-top: 12px; display: none; }
-
-        /* Form Controls */
-        .form-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; font-size: 0.9rem; outline: none; background: var(--bg); color: var(--primary); }
-        .btn { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
-        .btn:active { background: #B2702E; }
-
-        /* Logs List */
-        .log-item { border-bottom: 1px solid var(--border-color); padding: 10px 0; font-size: 0.85rem; position: relative; }
-        .log-item:last-child { border-bottom: none; }
-        .log-meta { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75rem; margin-bottom: 4px; }
-        .log-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
-        .log-del { position: absolute; right: 0; bottom: 10px; color: #FF6B6B; font-size: 0.75rem; cursor: pointer; }
-
-        /* Bottom Tab Navigation */
-        .nav-bar {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); display: flex; border-top: 1px solid var(--border-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.02); z-index: 100;
-        }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; cursor: pointer; }
-        .nav-item.active { color: var(--accent); }
-        .nav-icon { font-size: 1.3rem; margin-bottom: 2px; }
-
-        /* Architecture Core Info for Expansion */
-        .dev-code { background: #272822; color: #F8F8F2; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.75rem; overflow-x: auto; margin: 10px 0; }
-    </style>
-</head>
-<body>
-
-    <div class="app-bar">
-        <h1 id="appBarTitle">MD01 DIAL EXPERT</h1>
-        <p>精密量化冲煮物理容器架构</p>
-    </div>
-
-    <!-- VIEW 1: CORE CALCULATOR -->
-    <div id="view-calc" class="view-section active">
-        <div class="card">
-            <div class="segmented-control">
-                <div class="segmented-item active" onclick="setMethod('espresso', this)">意式浓缩 (Star 3)</div>
-                <div class="segmented-item" onclick="setMethod('pourover', this)">手冲滴滤 (V60)</div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title"><span>烘焙度架构级控制</span><span class="value-badge" id="roastVal">中度烘焙</span></div>
-            <input type="range" id="roastLevel" min="1" max="3" value="2" step="1" oninput="calculate()">
-            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); font-weight:600;">
-                <span>浅烘 (高硬度)</span>
-                <span>中度烘焙</span>
-                <span>深烘 (松脆多孔)</span>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title"><span>热动能水温控制</span><span class="value-badge" id="tempVal">92°C</span></div>
-            <input type="range" id="waterTemp" min="80" max="98" value="92" step="1" oninput="calculate()">
-        </div>
-
-        <div class="card" style="background: var(--primary); color: white;">
-            <div class="dashboard">
-                <div class="dial">
-                    <div class="dial-num" id="targetClick">11</div>
-                    <div class="dial-unit">TARGET CLICK</div>
-                </div>
-                <div class="sub-grid">
-                    <span>目标粉体粒径: <strong id="targetMicron" style="color:white;">300</strong> <strong style="color:var(--accent);">μm</strong></span>
-                    <span>行程解构率: <strong style="color:var(--accent);">~26.5 μm/格</strong></span>
-                </div>
-                <div class="alert-info" id="alertBox"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- VIEW 2: BREW LOGS (DATABASE VIA LOCALSTORAGE) -->
-    <div id="view-logs" class="view-section">
-        <div class="card">
-            <div class="card-title">新建冲煮日志记录</div>
-            <input type="text" id="logBean" class="form-input" placeholder="咖啡豆名称 (如: 耶加雪菲 厌氧日晒)">
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="logClick" class="form-input" placeholder="实际使用刻度 (Click)">
-                <input type="number" id="logTemp" class="form-input" placeholder="水温 (°C)">
-            </div>
-            <input type="text" id="logNote" class="form-input" placeholder="风味笔记表现 / 萃取秒数反馈">
-            <button class="btn" onclick="saveLog()">本地持久化序列化存储</button>
-        </div>
-
-        <div class="card">
-            <div class="card-title">历史冲煮数据链 (LocalStorage)</div>
-            <div id="logsContainer"><!-- Dynamic --></div>
-        </div>
-    </div>
-
-    <!-- VIEW 3: ARCHITECTURE & EXTENSION MANUAL -->
-    <div id="view-dev" class="view-section">
-        <div class="card">
-            <div class="card-title">应用扩展架构说明 (无损维护)</div>
-            <p style="font-size:0.85rem; line-height:1.5; color:var(--primary); margin-bottom:10px;">
-                本应用采用原生 <strong>Vanilla JS + PWA 离线沙盒架构</strong> 编写，你可以随时使用任何文本编辑器打开本文件修改。代码不依赖任何外部框架，100%全本地化，不上传任何隐私。
-            </p>
-            <div class="card-title" style="font-size:0.85rem; margin-top:15px;">如何添加新模块：</div>
-            <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
-                1. <strong>增加视图：</strong> 在 HTML 中复制一个 <code>&lt;div class="view-section"&gt;</code> 并赋予唯一 ID。<br>
-                2. <strong>增加导航：</strong> 在底部 <code>nav-bar</code> 中增加一个按钮，绑定 <code>switchView('你的ID')</code>。<br>
-                3. <strong>本地硬件联动：</strong> 可通过 <code>navigator.bluetooth</code> 增加蓝牙连接数显咖啡秤、电子温度计等高级扩展功能。
-            </p>
-        </div>
-    </div>
-
-    <!-- BOTTOM NAVIGATION BAR -->
-    <div class="nav-bar">
-        <div class="nav-item active" onclick="switchView('calc', this)">
-            <div class="nav-icon">📊</div>
-            <span>量化计算</span>
-        </div>
-        <div class="nav-item" onclick="switchView('logs', this)">
-            <div class="nav-icon">📓</div>
-            <span>冲煮日志</span>
-        </div>
-        <div class="nav-item" onclick="switchView('dev', this)">
-            <div class="nav-icon">🛠️</div>
-            <span>架构拓展</span>
-        </div>
-    </div>
-
-    <script>
-        // PWA Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('PWA Service Worker 注册成功:', reg.scope))
-                    .catch(err => console.log('Service Worker 注册失败:', err));
-            });
-        }
-
-        // View Router Switcher
-        function switchView(viewId, element) {
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
-            document.getElementById('view-' + viewId).classList.add('active');
-            if(element) element.classList.add('active');
-            
-            const titles = { calc: "MD01 DIAL EXPERT", logs: "BREW DATA CHAIN", dev: "DEVELOPER MANUAL" };
-            document.getElementById('appBarTitle').innerText = titles[viewId];
-        }
-
-        // Calculation Subsystem
-        let currentMethod = 'espresso';
-        const roastMap = { 1: "极浅 / 浅度烘焙", 2: "城市 / 中度烘焙", 3: "全城 / 深度烘焙" };
-
-        function setMethod(method, el) {
-            currentMethod = method;
-            document.querySelectorAll('.segmented-item').forEach(item => item.classList.remove('active'));
-            el.classList.add('active');
-            calculate();
-        }
-
-        function calculate() {
-            const roast = parseInt(document.getElementById('roastLevel').value);
-            const temp = parseInt(document.getElementById('waterTemp').value);
-
-            document.getElementById('roastVal').innerText = roastMap[roast];
-            document.getElementById('tempVal').innerText = temp + "°C";
-
-            let targetMicron = 0;
-            let alertMsg = "";
-            const MICRON_PER_CLICK = 26.5; 
-            
-            if (currentMethod === 'espresso') {
-                targetMicron = 300;
-                if (roast === 1) targetMicron -= 60;  
-                if (roast === 3) targetMicron += 70;  
-
-                if (roast === 3 && temp > 88) alertMsg = "⚠️ 高温预警：深烘豆结构高度疏松且脆，高温易导致大分子苦涩物瞬间溶出，建议降温到 82°C-85°C。";
-                if (roast === 1 && temp < 93) alertMsg = "⚠️ 腔体热补偿提示：浅烘硬度极高，若使用手动加压设备，请连续用沸水预热冲煮头 2-3 次以防失热。";
-            } else {
-                targetMicron = 820;
-                if (roast === 1) targetMicron -= 140; 
-                if (roast === 3) targetMicron += 180; 
-
-                if (roast === 3 && temp > 86) alertMsg = "⚠️ 堵塞预警：深烘豆极易产生细粉，若水温过高，排气会封锁滤纸孔隙造成过度浸泡。";
-                if (roast === 1 && temp < 92) alertMsg = "⚠️ 动能提示：浅烘成分难溶，建议使用 93°C 以上高温水进行分段大流速注水。";
-            }
-
-            let targetClick = Math.round(targetMicron / MICRON_PER_CLICK);
-            if(targetClick < 0) targetClick = 0;
-
-            document.getElementById('targetMicron').innerText = targetMicron;
-            document.getElementById('targetClick').innerText = targetClick;
-            
-            const alertBox = document.getElementById('alertBox');
-            if (alertMsg) {
-                alertBox.innerText = alertMsg;
-                alertBox.style.display = 'block';
-            } else {
-                alertBox.style.display = 'none';
-            }
-        }
-
-        // LocalStorage Database Subsystem
-        function saveLog() {
-            const bean = document.getElementById('logBean').value.trim();
-            const click = document.getElementById('logClick').value.trim();
-            const temp = document.getElementById('logTemp').value.trim();
-            const note = document.getElementById('logNote').value.trim();
-
-            if (!bean || !click || !temp) {
-                alert("请完整填写豆名、刻度及水温参数！");
-                return;
-            }
-
-            const log = {
-                id: Date.now(),
-                date: new Date().toLocaleDateString(),
-                bean: bean,
-                click: click,
-                temp: temp,
-                note: note
-            };
-
-            let logs = JSON.parse(localStorage.getItem('coffee_logs') || '[]');
-            logs.unshift(log);
-            localStorage.setItem('coffee_logs', JSON.stringify(logs));
-
-            // Clear Form
-            document.getElementById('logBean').value = '';
-            document.getElementById('logClick').value = '';
-            document.getElementById('logTemp').value = '';
-            document.getElementById('logNote').value = '';
-
-            loadLogs();
-            alert("日志已安全写入本地数据链！");
-        }
-
-        function loadLogs() {
-            const container = document.getElementById('logsContainer');
-            let logs = JSON.parse(localStorage.getItem('coffee_logs') || '[]');
-            
-            if(logs.length === 0) {
-                container.innerHTML = '<p style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:20px 0;">暂无历史冲煮数据</p>';
-                return;
-            }
-
-            container.innerHTML = logs.map(log => `
-                <div class="log-item">
-                    <div class="log-meta"><span>${log.date}</span><span>${log.temp}°C / ${log.click}格</span></div>
-                    <div class="log-title">${log.bean}</div>
-                    <div style="color:var(--text-muted); font-size:0.8rem; margin-top:2px;">${log.note || '无备注内容'}</div>
-                    <div class="log-del" onclick="deleteLog(${log.id})">删除</div>
-                </div>
-            `).join('');
-        }
-
-        function deleteLog(id) {
-            if(confirm("确定删除该条冲煮日志吗？")) {
-                let logs = JSON.parse(localStorage.getItem('coffee_logs') || '[]');
-                logs = logs.filter(log => log.id !== id);
-                localStorage.setItem('coffee_logs', JSON.stringify(logs));
-                loadLogs();
-            }
-        }
-
-        // Initialize App
-        calculate();
-        loadLogs();
-    </script>
-</body>
-</html>
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#455b53"><link rel="manifest" href="manifest.json"><title>MD01 冲煮工作台</title>
+<style>
+:root{--bg:#f4f3ee;--ink:#283b34;--accent:#455b53;--muted:#62746c;--line:#dce2da}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,sans-serif}header,main{max-width:850px;margin:auto;padding:20px}header h1{margin:0;font-size:26px}p{margin:8px 0;color:var(--muted)}nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}button{cursor:pointer;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);padding:11px 16px;font:inherit;min-height:44px}button.primary,button[aria-selected=true]{background:var(--accent);color:white}.card{background:white;border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px}h2{font-size:19px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;font-size:14px;color:var(--muted)}input,select,textarea{width:100%;font:inherit;background:#f8f9f6;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;margin:5px 0}textarea{min-height:70px}.wide{grid-column:1/-1}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.result{font-size:32px;font-weight:700;color:var(--accent)}small{color:var(--muted)}#status{padding:8px 0;color:#834c22;white-space:pre-wrap}.record{border-top:1px solid var(--line);padding:14px 0;overflow-wrap:anywhere}.record p{white-space:pre-wrap}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:7px;border-bottom:1px solid var(--line)}td input{min-width:65px}svg{width:100%;height:170px}section[hidden]{display:none}.scroll{overflow-x:auto}@media(max-width:480px){header,main{padding:14px}.card{padding:16px}.grid{gap:8px}button{padding:10px 12px}}
+</style></head><body>
+<header><h1>MD01 冲煮工作台</h1><p>80 mm 平刀 · 90 格 · 300–1200 rpm</p><nav aria-label="主导航"><button data-tab="brew" aria-selected="true">冲煮配方</button><button data-tab="beans" aria-selected="false">咖啡豆库</button><button data-tab="logs" aria-selected="false">冲煮日志</button></nav><div id="status" role="status" aria-live="polite"></div></header>
+<main><section id="brew"><div class="card"><h2>选择方案</h2><label>咖啡豆<select id="beanSelect"><option value="">未关联咖啡豆</option></select></label><div class="grid"><label>冲煮方式<select id="method"><option value="espresso">意式</option><option value="pourover">V60 手冲</option></select></label><label>预设<select id="preset"><option value="slow">深烘高压慢萃</option><option value="fast">浅烘快萃</option><option value="v60">V60 三段式</option></select></label><label>烘焙度<select id="roast"><option value="light">浅烘</option><option value="medium">中烘</option><option value="dark" selected>深烘</option></select></label><label>粉碗 / 滤杯<input id="basket" value="556 直身平底 / 0.3 mm 孔"></label></div><p>预设是你的试冲起点。调整水温不会虚构粒径变化；更换豆子、粉碗或转速后，需要重新校准。</p></div>
+<form id="recipe"><div class="card"><h2>研磨与萃取</h2><div class="grid"><label>研磨刻度（0–90，半格）<input id="grind" type="number" min="0" max="90" step="0.5" required></label><label>转速 rpm（100 步进）<input id="rpm" type="number" min="300" max="1200" step="100" required></label><label>水温 °C<input id="temp" type="number" min="80" max="100" step="0.5" required></label><label>粉量 g<input id="dose" type="number" min="1" max="60" step="0.1" required></label><label id="yieldLabel">目标液重 / 手冲注水量 g<input id="yield" type="number" min="1" max="1500" step="0.1" required></label><label>目标总时间 s（从启动计）<input id="time" type="number" min="1" max="600" step="1" required></label><label>泵流量 %（记录值）<input id="pump" type="number" min="0" max="100" step="1" required></label><label>实际峰值 bar（选填）<input id="peak" type="number" min="0" max="15" step="0.1"></label></div><div class="result" id="ratio"></div><p id="hint"></p><p>泵百分比不等于压力。35% 曾实测约 8 bar；40% 空载约 6.5–7 g/s，不能据此推算粉饼出液速度。</p></div>
+<div class="card" id="pressureCard"><h2>压力曲线 · App 最多 6 点</h2><p>每点表示该时刻的目标压力，时间必须递增。机身只有 4 段；实际插值方式以机器为准，此图仅连接控制点。</p><div class="scroll"><table><thead><tr><th>时间 s</th><th>压力 bar</th><th>操作</th></tr></thead><tbody id="points"></tbody></table></div><button type="button" id="addPoint">添加控制点</button><svg id="chart" viewBox="0 0 600 170" role="img" aria-label="目标压力曲线"></svg><p id="curveSummary"></p></div>
+<div class="card"><h2>刻度校准</h2><p>以同一豆子、粉碗和转速的成功记录为基准。15–30 格为厂家意式参考，60–80 格为手冲参考；快萃没有可靠实测刻度，需自行建立基准。</p><div class="grid"><label>成功基准刻度<input id="baseline" type="number" min="0" max="90" step="0.5"></label><label>本次微调格数<input id="offset" type="number" min="-90" max="90" step="0.5" value="0"></label></div><p id="calibration"></p><button type="button" id="applyCalibration">采用校准刻度</button></div>
+<div class="card"><h2>记录本次结果</h2><div class="grid"><label>实际液重 / 手冲总注水 g<input id="actualYield" type="number" min="1" max="1500" step="0.1"></label><label>实际总时间 s<input id="actualTime" type="number" min="1" max="600" step="0.1"></label><label>首次出液时间 s<input id="firstDrop" type="number" min="0" max="600" step="0.1"></label><label>口感反馈<select id="taste"><option value="">未评价</option><option>满意</option><option>偏酸</option><option>偏苦</option><option>干涩</option><option>偏淡</option></select></label><label class="wide">风味与备注<textarea id="note"></textarea></label></div><button class="primary" type="submit">保存完整冲煮日志</button><p>日志保存当时的整套参数和豆子信息；后续编辑豆库不会改写旧日志。</p></div></form></section>
+<section id="beans" hidden><div class="card"><h2>咖啡豆档案</h2><form id="beanForm"><input id="beanId" type="hidden"><div class="grid" id="beanFields"></div><div class="actions"><button class="primary">保存豆子</button><button type="button" id="resetBean">新建 / 清空表单</button></div></form></div><div class="card" id="beanList"></div></section>
+<section id="logs" hidden><div class="card"><h2>备份与恢复</h2><p>只保存在当前浏览器，清除站点数据会丢失记录。导出 JSON 可备份豆库和日志；导入采用 ID 合并，不覆盖已有记录。</p><div class="actions"><button id="export">导出备份 JSON</button><label>导入备份<input id="import" type="file" accept=".json,application/json"></label></div><label>搜索豆名 / 备注<input id="search" type="search"></label></div><div class="card" id="logList"></div></section></main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), KEY='md01_data_v2';
+const fields=[['name','豆名 / 品牌','text'],['origin','产地 / 庄园','text'],['variety','品种','text'],['process','处理法','text'],['roast','烘焙度','select'],['roastDate','烘焙日期','date'],['openedDate','开封日期','date'],['flavors','风味标签','text'],['density','密度备注（选填）','text'],['basket','推荐粉碗 / 滤杯','text'],['method','推荐萃取法','text'],['grind','成功刻度（选填）','number'],['rpm','对应转速（选填）','number'],['notes','备注','text']];
+const presets={slow:{method:'espresso',roast:'dark',grind:20,rpm:1000,temp:91,dose:16,yield:32,time:40,pump:40,basket:'556 直身平底 / 0.3 mm 孔',points:[[0,9],[40,9]]},fast:{method:'espresso',roast:'light',grind:45,rpm:300,temp:99,dose:14,yield:105,time:21,pump:40,basket:'填写浅烘快萃实际粉碗',points:[[0,9],[4,7],[11,6],[17,5],[21,5]]},v60:{method:'pourover',roast:'medium',grind:65,rpm:300,temp:93,dose:15,yield:225,time:150,pump:0,basket:'V60',points:[]}};
+let state={version:2,beans:[],logs:[]},curve=[],storageBlocked=false;
+function say(s){$('status').textContent=s;}
+function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);}
+function persist(next){try{localStorage.setItem(KEY,JSON.stringify(next));state=next;return true;}catch(e){say('保存失败：浏览器存储不可用或已满，请先导出备份。');return false;}}
+function load(){try{const raw=localStorage.getItem(KEY);if(raw){const d=JSON.parse(raw);if(!validBackup(d))throw Error('数据结构异常');state=d;}else{const old=JSON.parse(localStorage.getItem('coffee_logs')||'[]');if(!Array.isArray(old))throw Error('旧日志结构异常');state.logs=old.map(l=>({id:'legacy-'+l.id,date:l.date,legacy:true,beanName:String(l.bean||''),grind:l.click,temp:l.temp,note:String(l.note||'')}));}}catch(e){storageBlocked=true;say('已有数据无法读取，暂停写入以避免覆盖。请先保留浏览器存储并排查。');}}
+function validBackup(d){return d&&d.version===2&&Array.isArray(d.beans)&&Array.isArray(d.logs)&&d.beans.every(b=>b&&typeof b.id==='string'&&typeof b.name==='string')&&d.logs.every(l=>l&&typeof l.id==='string'&&typeof l.beanName==='string'&&(l.legacy===true||(Array.isArray(l.points)&&l.points.length<=6&&l.points.every(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite)))));}
+function commit(next){if(storageBlocked){say('数据读取异常，不能覆盖原数据。');return false;}return persist(next);}
+function node(tag,text){const n=document.createElement(tag);n.textContent=text;return n;}
+function show(tab){document.querySelectorAll('main>section').forEach(s=>s.hidden=s.id!==tab);document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));}
+function setPreset(name){const p=presets[name];$('preset').value=name;for(const k of ['method','roast','grind','rpm','temp','dose','yield','time','pump','basket'])$(k).value=p[k];curve=p.points.map(a=>a.slice());['peak','actualYield','actualTime','firstDrop'].forEach(k=>$(k).value='');renderCurve();update();}
+function curveError(){if($('method').value==='pourover')return '';if(curve.length<2||curve.length>6)return '压力曲线需 2–6 个控制点。';for(let i=0;i<curve.length;i++){const [t,p]=curve[i];if(!Number.isFinite(t)||!Number.isFinite(p)||t<0||t>600||p<0||p>12)return '压力点必须为 0–600 s、0–12 bar 的有效数字。';if(i===0&&t!==0)return '第一个点必须从 0 s 开始。';if(i&&t<=curve[i-1][0])return '控制点时间必须严格递增。';}if(curve.at(-1)[0]!==Number($('time').value))return '最后一点时间需等于目标总时间。';return '';}
+function renderCurve(){const body=$('points');body.replaceChildren();curve.forEach((pt,i)=>{const tr=document.createElement('tr');pt.forEach((v,j)=>{const td=document.createElement('td'),input=document.createElement('input');input.type='number';input.min='0';input.max=j?'12':'600';input.step=j?'0.1':'1';input.value=v;input.setAttribute('aria-label',`第 ${i+1} 点${j?'压力 bar':'时间 s'}`);input.oninput=()=>{curve[i][j]=input.value===''?NaN:Number(input.value);update();};td.append(input);tr.append(td);});const td=document.createElement('td'),b=node('button','删除');b.type='button';b.onclick=()=>{curve.splice(i,1);renderCurve();update();};td.append(b);tr.append(td);body.append(tr);});$('addPoint').disabled=curve.length>=6;}
+function update(){const pour=$('method').value==='pourover',dose=Number($('dose').value),y=Number($('yield').value),time=Number($('time').value);$('pressureCard').hidden=pour;$('ratio').textContent=dose>0&&y>0?`1 : ${(y/dose).toFixed(2)}`:'请填写粉量与目标重量';const fast=$('preset').value==='fast';$('hint').textContent=pour?'V60 起点：15 g / 225 g，三段注水，约 150 s；这里记录注水量，不是杯中液重。':fast?'浅烘快萃：14 → 105 g，99°C；9 bar 4 s → 7 bar 7 s → 6 bar 6 s → 5 bar 4 s。45 格 / 300 rpm 仅为待校准占位值，尚无你的实测依据。':'深烘慢萃：16 → 32 g，35–45 s、目标 9 bar；奶咖可手动改为 15 → 30 g。20 格 / 91°C 是待试冲起点。';const err=curveError();$('curveSummary').textContent=err||'目标曲线有效。App 点位表示不能保证复现机身分段程序；请核对机器控制方式。';const good=curve.every(a=>a.every(Number.isFinite));$('chart').replaceChildren();if(good&&curve.length){const ns='http://www.w3.org/2000/svg';const axis=document.createElementNS(ns,'path');axis.setAttribute('d','M35 10V140H580');axis.setAttribute('fill','none');axis.setAttribute('stroke','#9aa99d');$('chart').append(axis);const max=Math.max(1,...curve.map(a=>a[0]));const line=document.createElementNS(ns,'polyline');line.setAttribute('points',curve.map(([t,p])=>`${35+t/max*540},${140-p/12*125}`).join(' '));line.setAttribute('fill','none');line.setAttribute('stroke','#455b53');line.setAttribute('stroke-width','3');$('chart').append(line);for(const [t,p] of curve){const label=document.createElementNS(ns,'text');label.setAttribute('x',35+t/max*530);label.setAttribute('y',165);label.setAttribute('font-size','12');label.textContent=`${t}s / ${p}bar`;$('chart').append(label);}}const base=$('baseline').value,sum=Number(base)+Number($('offset').value);$('calibration').textContent=base===''?'填写基准后可计算半格微调。':Number.isFinite(sum)&&sum>=0&&sum<=90?`校准目标：${sum} 格（数值减小通常更细）`:'微调超出 0–90 格，请修改。';}
+function renderBeans(){const sel=$('beanSelect'),selected=sel.value;sel.replaceChildren(new Option('未关联咖啡豆',''));state.beans.forEach(b=>sel.add(new Option(b.name,b.id)));sel.value=selected;const list=$('beanList');list.replaceChildren(node('h2','已存豆子'));if(!state.beans.length)list.append(node('p','暂无豆子，请先建立档案。'));state.beans.forEach(b=>{const row=node('div','');row.className='record';row.append(node('strong',b.name),node('p',`${b.origin||'未填产地'} · ${b.process||'未填处理法'} · ${b.roast||'未填烘焙度'}\n${b.flavors||''}`));const edit=node('button','编辑');edit.onclick=()=>{fields.forEach(([k])=>$('b_'+k).value=b[k]??'');$('beanId').value=b.id;show('beans');};const del=node('button','删除');del.onclick=()=>{if(confirm('删除豆子档案？已有日志快照会保留。')&&commit({...state,beans:state.beans.filter(x=>x.id!==b.id)}))renderBeans();};row.append(edit,del);list.append(row);});}
+function renderLogs(){const list=$('logList'),q=$('search').value.toLowerCase();list.replaceChildren(node('h2','冲煮记录'));const logs=state.logs.filter(l=>(l.beanName+' '+(l.note||'')).toLowerCase().includes(q));if(!logs.length)list.append(node('p','暂无匹配记录。'));logs.forEach(l=>{const row=node('div','');row.className='record';row.append(node('strong',l.beanName),node('p',`${l.date} · ${l.legacy?'旧版日志（缺失参数未补造）':l.method==='pourover'?'V60':'意式'}\n${l.grind} 格 / ${l.temp}°C${l.legacy?'':` / ${l.rpm} rpm\n${l.dose} → ${l.yield} g / ${l.time} s\n实际：${l.actualYield??'未填'} g / ${l.actualTime??'未填'} s · ${l.taste||'未评价'}\n压力点：${(l.points||[]).map(p=>p.join('s / ')+'bar').join(' → ')}`}`),node('p',l.note||'无备注'));const del=node('button','删除');del.onclick=()=>{if(confirm('删除此条记录？')&&commit({...state,logs:state.logs.filter(x=>x.id!==l.id)}))renderLogs();};row.append(del);list.append(row);});}
+fields.forEach(([key,title,type])=>{const label=node('label',title),input=document.createElement(type==='select'?'select':'input');input.id='b_'+key;if(type==='select'){['light','medium','dark'].forEach((v,i)=>input.add(new Option(['浅烘','中烘','深烘'][i],v)));}else input.type=type;if(key==='name'){input.required=true;input.maxLength=120;}if(key==='grind'){input.min=0;input.max=90;input.step=0.5;}if(key==='rpm'){input.min=300;input.max=1200;input.step=100;}label.append(input);$('beanFields').append(label);});
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));$('preset').onchange=()=>setPreset($('preset').value);$('method').onchange=()=>setPreset($('method').value==='pourover'?'v60':'slow');$('recipe').addEventListener('input',update);$('addPoint').onclick=()=>{if(curve.length<6)curve.push([curve.length?curve.at(-1)[0]+5:0,5]);renderCurve();update();};$('applyCalibration').onclick=()=>{const s=Number($('baseline').value)+Number($('offset').value);if($('baseline').value!==''&&Number.isFinite(s)&&s>=0&&s<=90&&s*2===Math.round(s*2)){$('grind').value=s;update();}else say('请填写有效的 0–90 格半格校准值。');};
+$('beanSelect').onchange=()=>{const b=state.beans.find(b=>b.id===$('beanSelect').value);if(!b)return;$('roast').value=b.roast;if(b.basket)$('basket').value=b.basket;if(b.grind!==''){$('baseline').value=b.grind;$('grind').value=b.grind;}else $('baseline').value='';$('offset').value=0;if(b.rpm!=='')$('rpm').value=b.rpm;update();say('已带入豆子烘焙度、粉碗及成功研磨参数，请核对当前预设。');};
+$('beanForm').onsubmit=e=>{e.preventDefault();const b={id:$('beanId').value||uid()};fields.forEach(([k])=>b[k]=$('b_'+k).value.trim());if(!b.name){say('豆名不能为空。');return;}if(commit({...state,beans:[b,...state.beans.filter(x=>x.id!==b.id)]})){renderBeans();$('beanForm').reset();say('咖啡豆已保存。');}};$('resetBean').onclick=()=>$('beanForm').reset();
+$('recipe').onsubmit=e=>{e.preventDefault();const err=curveError();if(err){say(err);return;}const bean=state.beans.find(b=>b.id===$('beanSelect').value);const l={id:uid(),date:new Date().toISOString(),beanId:bean?.id||null,beanName:bean?.name||'未关联豆子',beanSnapshot:bean?JSON.parse(JSON.stringify(bean)):null,points:$('method').value==='espresso'?curve.map(a=>a.slice()):[]};['method','preset','roast','basket','taste','note'].forEach(k=>l[k]=$(k).value);['grind','rpm','temp','dose','yield','time','pump','peak','actualYield','actualTime','firstDrop'].forEach(k=>l[k]=$(k).value===''?null:Number($(k).value));if(l.firstDrop!==null&&l.actualTime!==null&&l.firstDrop>l.actualTime){say('首次出液时间不能超过实际总时间。');return;}if(commit({...state,logs:[l,...state.logs]})){renderLogs();say('完整冲煮日志已保存。');}};
+$('search').oninput=renderLogs;$('export').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='md01-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('import').onchange=async()=>{const f=$('import').files[0];if(!f)return;try{if(f.size>5*1024*1024)throw Error('文件超过 5 MB');const d=JSON.parse(await f.text());if(!validBackup(d))throw Error('备份格式不正确');const merge=(a,b)=>[...a,...b.filter(x=>!a.some(y=>y.id===x.id))].filter((x,i,all)=>all.findIndex(y=>y.id===x.id)===i);if(commit({...state,beans:merge(state.beans,d.beans),logs:merge(state.logs,d.logs)})){renderBeans();renderLogs();say('备份已合并，已有 ID 保持原记录。');}}catch(e){say('导入失败：'+e.message);}finally{$('import').value='';}};
+load();setPreset('slow');renderBeans();renderLogs();
+if('serviceWorker'in navigator&&location.protocol!=='file:')window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').then(reg=>reg.update()).catch(()=>say('离线组件未就绪，当前页面仍可使用。')));
+</script></body></html>
